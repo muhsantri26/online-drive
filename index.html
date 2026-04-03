@@ -2,63 +2,86 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#3b82f6" />
   <title>Online Drive - Demo</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    /* Prevent zoom on input focus for iOS */
+    input, button, select, textarea {
+      font-size: 16px !important;
+    }
+    /* Ensure touch targets are at least 44x44px */
+    button {
+      min-height: 2.75rem;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 h-screen">
-  <div class="max-w-7xl mx-auto h-full p-4 flex gap-4">
+<body class="bg-gray-100 min-h-screen">
+  <div class="flex flex-col lg:flex-row gap-4 p-2 sm:p-4 h-screen">
+    <!-- Mobile Header -->
+    <div class="lg:hidden flex items-center justify-between bg-white rounded-lg shadow p-3 mb-2">
+      <h2 class="text-lg font-semibold">My Drive</h2>
+      <button id="sidebarToggle" class="text-2xl">☰</button>
+    </div>
+
     <!-- Sidebar -->
-    <aside class="w-72 bg-white rounded-lg shadow p-4 flex flex-col">
+    <aside id="sidebar" class="hidden lg:flex fixed lg:static inset-0 lg:inset-auto top-0 left-0 w-full sm:w-72 max-h-screen bg-white rounded-lg shadow p-3 sm:p-4 flex flex-col z-40 lg:z-auto">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold">My Drive</h2>
-        <button id="btnNewFolder" class="text-sm bg-blue-500 text-white px-3 py-1 rounded">Folder+</button>
+        <button id="btnNewFolder" class="text-sm bg-blue-500 text-white px-2 sm:px-3 py-1 rounded whitespace-nowrap">Folder+</button>
+        <button id="sidebarToggleClose" class="lg:hidden text-2xl ml-2">✕</button>
       </div>
       <div class="flex-1 overflow-auto" id="sidebarTree"></div>
       <div class="mt-4 text-xs text-gray-500">Local demo - data disimpan di localStorage</div>
     </aside>
 
+    <!-- Overlay untuk sidebar -->
+    <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black bg-opacity-40 lg:hidden z-30" onclick="document.getElementById('sidebar').classList.add('hidden'); document.getElementById('sidebarOverlay').classList.add('hidden');"></div>
+
     <!-- Main -->
-    <main class="flex-1 bg-white rounded-lg shadow p-4 flex flex-col">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-3">
-          <nav id="breadcrumb" class="text-sm text-gray-600"></nav>
-          <input id="search" placeholder="Cari file atau folder" class="border rounded px-2 py-1 text-sm" />
+    <main class="flex-1 bg-white rounded-lg shadow p-3 sm:p-4 flex flex-col overflow-hidden">
+      <!-- Top Bar - Responsive -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2 sm:gap-3">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+          <nav id="breadcrumb" class="text-xs sm:text-sm text-gray-600 overflow-x-auto whitespace-nowrap flex-1"></nav>
+          <input id="search" placeholder="Cari file atau folder" class="border rounded px-2 py-1 text-xs sm:text-sm w-full sm:w-auto" />
         </div>
-        <div class="flex items-center gap-2">
-          <label class="bg-green-500 text-white px-3 py-1 rounded cursor-pointer text-sm">
-            Upload File
+        <div class="flex items-center gap-1 sm:gap-2 w-full sm:w-auto flex-wrap">
+          <label class="bg-green-500 text-white px-2 sm:px-3 py-1 rounded cursor-pointer text-xs sm:text-sm whitespace-nowrap flex-1 sm:flex-initial text-center">
+            Upload
             <input id="fileInput" type="file" class="hidden" />
           </label>
-          <label class="bg-orange-500 text-white px-3 py-1 rounded cursor-pointer text-sm">
-            Upload Folder
+          <label class="bg-orange-500 text-white px-2 sm:px-3 py-1 rounded cursor-pointer text-xs sm:text-sm whitespace-nowrap flex-1 sm:flex-initial text-center">
+            Folder
             <input id="folderInput" type="file" class="hidden" webkitdirectory multiple />
           </label>
-          <button id="btnRefresh" class="bg-gray-200 px-3 py-1 rounded text-sm">Refresh</button>
+          <button id="btnRefresh" class="bg-gray-200 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm">⟳</button>
         </div>
       </div>
 
+      <!-- Main Content Grid -->
       <div id="mainContent" class="flex-1 overflow-auto">
         <!-- Grid/list of items will be rendered here -->
       </div>
 
       <!-- Progress Bar -->
-      <div id="progressContainer" class="hidden mt-4">
+      <div id="progressContainer" class="hidden mt-3 sm:mt-4">
         <div class="bg-gray-200 rounded-full h-3">
           <div id="progressBar" class="bg-blue-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
         </div>
-        <p id="progressText" class="text-sm mt-2 text-gray-600">Memproses...</p>
+        <p id="progressText" class="text-xs sm:text-sm mt-2 text-gray-600">Memproses...</p>
       </div>
     </main>
 
-        <!-- Preview Modal -->
-        <div id="previewModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50">
-          <div class="bg-white rounded-lg overflow-auto max-w-4xl w-full p-4 relative">
-            <button id="previewClose" class="absolute top-2 right-2 text-gray-600">✕</button>
-            <div id="previewBody" class="flex items-center justify-center"></div>
-          </div>
-        </div>
+    <!-- Preview Modal -->
+    <div id="previewModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 p-4">
+      <div class="bg-white rounded-lg overflow-auto max-h-[80vh] w-full max-w-2xl sm:max-w-4xl p-4 relative">
+        <button id="previewClose" class="absolute top-2 right-2 text-gray-600 text-2xl">✕</button>
+        <div id="previewBody" class="flex items-center justify-center"></div>
+      </div>
+    </div>
   </div>
 
   <script src="js/app.js"></script>

@@ -20,12 +20,22 @@ function makeSample(){ return {
 
 function init(){
   drive = load();
-  if(!drive){ drive = makeSample(); save(); }
+  if(!drive || drive.type !== 'folder' || !Array.isArray(drive.children)){
+    drive = makeSample();
+    save();
+  }
   currentFolderId = 'root';
   renderAll();
 }
 
+function ensureFolder(node){
+  if(!node || node.type !== 'folder') return null;
+  if(!Array.isArray(node.children)) node.children = [];
+  return node;
+}
+
 function findNode(id, node = drive){ if(!node) return null; if(node.id === id) return node; if(node.type === 'folder'){
+  if(!Array.isArray(node.children)) node.children = [];
   for(const c of node.children){ const found = findNode(id, c); if(found) return found; }
 } return null; }
 
@@ -34,11 +44,11 @@ function findParent(targetId, node = drive){ if(!node || node.type !== 'folder')
 function renderSidebar(){ const el = document.getElementById('sidebarTree'); el.innerHTML = '';
   function renderNode(node, container, depth=0){
     const wrapper = document.createElement('div');
-    wrapper.className = 'flex items-center gap-2 py-1';
+    wrapper.className = 'flex items-center gap-1 sm:gap-2 py-1 text-xs sm:text-sm';
     wrapper.style.paddingLeft = (depth*10) + 'px';
 
     const label = document.createElement('button');
-    label.className = 'text-left text-sm flex-1';
+    label.className = 'text-left flex-1 truncate';
     label.textContent = node.name;
     label.onclick = ()=>{ currentFolderId = node.id; renderAll(); };
     wrapper.appendChild(label);
@@ -68,7 +78,7 @@ function renderBreadcrumb(){ const bc = document.getElementById('breadcrumb'); b
   if(path.length === 0){ path.push(drive); }
   path.forEach((p, i)=>{
     const span = document.createElement('button');
-    span.className = 'text-sm text-blue-600';
+    span.className = 'text-xs sm:text-sm text-blue-600 hover:text-blue-800 px-1';
     span.textContent = p.name + (i < path.length-1 ? ' / ' : '');
     span.onclick = ()=>{ currentFolderId = p.id; renderAll(); };
     bc.appendChild(span);
@@ -79,18 +89,18 @@ function renderMain(){ const container = document.getElementById('mainContent');
   const folder = findNode(currentFolderId);
   if(!folder || folder.type !== 'folder') return;
   // list folders first
-  const grid = document.createElement('div'); grid.className = 'grid grid-cols-3 gap-4';
+  const grid = document.createElement('div'); grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4';
   folder.children.forEach(child => {
-    const card = document.createElement('div'); card.className = 'p-3 border rounded hover:shadow cursor-pointer';
+    const card = document.createElement('div'); card.className = 'p-2 sm:p-3 border rounded hover:shadow cursor-pointer text-sm sm:text-base';
     card.setAttribute('data-id', child.id);
     if(child.type === 'folder'){
-      card.innerHTML = `<div class=\"text-2xl\">📁</div><div class=\"font-medium mt-2\">${child.name}</div>`;
+      card.innerHTML = `<div class=\"text-2xl sm:text-4xl\">📁</div><div class=\"font-medium mt-2 break-words\">${child.name}</div>`;
       // Add download button if folder has ZIP
       if(child.zip_message_id){
-        const actions = document.createElement('div'); actions.className='mt-2 flex gap-2';
-        const btnDown = document.createElement('button'); btnDown.className='text-xs bg-blue-500 text-white px-2 py-1 rounded'; btnDown.textContent='Download ZIP';
+        const actions = document.createElement('div'); actions.className='mt-2 flex gap-1 sm:gap-2 flex-wrap';
+        const btnDown = document.createElement('button'); btnDown.className='text-xs bg-blue-500 text-white px-2 py-1 rounded flex-1 sm:flex-initial'; btnDown.textContent='Download ZIP';
         btnDown.onclick = (e)=>{ e.stopPropagation(); downloadZipFolder(child.id); };
-        const btnDel = document.createElement('button'); btnDel.className='text-xs bg-red-500 text-white px-2 py-1 rounded'; btnDel.textContent='Delete';
+        const btnDel = document.createElement('button'); btnDel.className='text-xs bg-red-500 text-white px-2 py-1 rounded flex-1 sm:flex-initial'; btnDel.textContent='Delete';
         btnDel.onclick = (e)=>{ e.stopPropagation(); deleteNode(child.id); };
         card.appendChild(actions);
         actions.appendChild(btnDown); actions.appendChild(btnDel);
@@ -99,12 +109,12 @@ function renderMain(){ const container = document.getElementById('mainContent');
         card.onclick = ()=>{ currentFolderId = child.id; renderAll(); };
       }
     } else {
-      card.innerHTML = `<div class=\"text-2xl\">📄</div><div class=\"font-medium mt-2\">${child.name}</div><div class=\"text-xs text-gray-500 mt-2\">${child.mime || ''}</div>`;
+      card.innerHTML = `<div class=\"text-2xl sm:text-4xl\">📄</div><div class=\"font-medium mt-2 break-words\">${child.name}</div><div class=\"text-xs text-gray-500 mt-2\">${child.mime || ''}</div>`;
       // actions
-      const actions = document.createElement('div'); actions.className='mt-2 flex gap-2';
-      const btnDown = document.createElement('button'); btnDown.className='text-xs bg-blue-500 text-white px-2 py-1 rounded'; btnDown.textContent='Download';
+      const actions = document.createElement('div'); actions.className='mt-2 flex gap-1 sm:gap-2 flex-wrap';
+      const btnDown = document.createElement('button'); btnDown.className='text-xs bg-blue-500 text-white px-2 py-1 rounded flex-1 sm:flex-initial'; btnDown.textContent='Download';
       btnDown.onclick = (e)=>{ e.stopPropagation(); downloadFile(child.id); };
-      const btnDel = document.createElement('button'); btnDel.className='text-xs bg-red-500 text-white px-2 py-1 rounded'; btnDel.textContent='Delete';
+      const btnDel = document.createElement('button'); btnDel.className='text-xs bg-red-500 text-white px-2 py-1 rounded flex-1 sm:flex-initial'; btnDel.textContent='Delete';
       btnDel.onclick = (e)=>{ e.stopPropagation(); deleteNode(child.id); };
       card.appendChild(actions);
       actions.appendChild(btnDown); actions.appendChild(btnDel);
@@ -117,7 +127,7 @@ function renderMain(){ const container = document.getElementById('mainContent');
 
 function renderAll(){ renderSidebar(); renderBreadcrumb(); renderMain(); }
 
-function createFolder(){ const name = prompt('Nama folder baru:'); if(!name) return; const parent = findNode(currentFolderId); if(!parent || parent.type!=='folder') return;
+function createFolder(){ const name = prompt('Nama folder baru:'); if(!name) return; let parent = ensureFolder(findNode(currentFolderId)); if(!parent) parent = ensureFolder(drive); if(!parent) return;
   parent.children.push({ id: uid('f_'), name, type: 'folder', children: [] }); save(); renderAll(); }
 
 function renameNode(id){ const node = findNode(id); if(!node) return; const newName = prompt('Nama baru:', node.name); if(!newName) return; node.name = newName; save(); renderAll(); }
@@ -163,10 +173,12 @@ function uploadFile(file, targetFolderId){
         if (data.ok) {
           const file_id = data.result.document.file_id;
           const message_id = data.result.message_id;
-          const parent = findNode(targetFolderId || currentFolderId);
-          parent.children.push({ id: uid('file_'), name: file.name, type: 'file', file_id, message_id, mime: file.type });
-          save();
-          renderAll();
+          let parent = ensureFolder(findNode(targetFolderId || currentFolderId));
+      if(!parent) parent = ensureFolder(drive);
+      if(!parent){ hideProgress(); alert('Folder target tidak ditemukan'); return; }
+      parent.children.push({ id: uid('file_'), name: file.name, type: 'file', file_id, message_id, mime: file.type });
+      save();
+      renderAll();
           hideProgress();
         } else {
           alert('Upload gagal: ' + data.description);
@@ -222,7 +234,9 @@ function uploadFolder(files, targetFolderId){
       if (data.ok) {
         const file_id = data.result.document.file_id;
         const message_id = data.result.message_id;
-        const parent = findNode(targetFolderId || currentFolderId);
+        let parent = ensureFolder(findNode(targetFolderId || currentFolderId));
+        if(!parent) parent = ensureFolder(drive);
+        if(!parent){ hideProgress(); alert('Folder target tidak ditemukan'); return; }
         
         // Create folder node to represent structure
         let folderNode = parent.children.find(c => c.name === folderName && c.type === 'folder');
@@ -296,13 +310,13 @@ function openPreview(id){
             if(node.mime && node.mime.startsWith('image/')){
               const img = document.createElement('img');
               img.src = objectUrl;
-              img.className = 'max-h-[70vh] w-auto';
+              img.className = 'max-h-[60vh] sm:max-h-[70vh] w-auto';
               body.appendChild(img);
             } else if(node.mime && node.mime.startsWith('video/')){
               const vid = document.createElement('video');
               vid.src = objectUrl;
               vid.controls = true;
-              vid.className = 'max-h-[70vh] w-full';
+              vid.className = 'max-h-[60vh] sm:max-h-[70vh] w-full';
               body.appendChild(vid);
             } else {
               body.textContent = 'Preview tidak tersedia untuk jenis file ini.';
@@ -340,6 +354,24 @@ function hideProgress() {
 
 // wire UI
 window.addEventListener('DOMContentLoaded', ()=>{
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebarToggleClose = document.getElementById('sidebarToggleClose');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  
+  if(sidebarToggle) sidebarToggle.onclick = ()=>{ sidebar.classList.remove('hidden'); sidebarOverlay.classList.remove('hidden'); };
+  if(sidebarToggleClose) sidebarToggleClose.onclick = ()=>{ sidebar.classList.add('hidden'); sidebarOverlay.classList.add('hidden'); };
+  
+  // Close sidebar when clicking on a folder
+  const originalRenderAll = renderAll;
+  window.renderAll = function(){
+    if(window.innerWidth < 1024){
+      sidebar.classList.add('hidden');
+      sidebarOverlay.classList.add('hidden');
+    }
+    originalRenderAll();
+  };
+  
   document.getElementById('btnNewFolder').onclick = createFolder;
   document.getElementById('fileInput').addEventListener('change', (e)=>{
     const f = e.target.files[0]; if(!f) return; uploadFile(f); e.target.value = '';
@@ -353,8 +385,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
     function walk(node){ if(node.name.toLowerCase().includes(q)) results.push(node); if(node.type === 'folder') node.children.forEach(walk); }
     walk(drive);
     const container = document.getElementById('mainContent'); container.innerHTML = '';
-    const list = document.createElement('div'); list.className = 'space-y-2'; results.forEach(r=>{
-      const row = document.createElement('div'); row.className='p-2 border rounded flex items-center justify-between'; row.textContent = (r.type==='folder'? '📁 ':'📄 ') + r.name;
+    const list = document.createElement('div'); list.className = 'space-y-1 sm:space-y-2'; results.forEach(r=>{
+      const row = document.createElement('div'); row.className='p-2 sm:p-3 border rounded flex items-center justify-between text-xs sm:text-sm'; row.textContent = (r.type==='folder'? '📁 ':'📄 ') + r.name;
       list.appendChild(row);
     }); container.appendChild(list);
   });
